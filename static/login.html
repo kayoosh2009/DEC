@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DEC</title>
+  <link rel="stylesheet" href="css/index.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <span class="logo">DEC</span>
+      <button class="new-chat-btn" id="newChatBtn">+ Новый чат</button>
+    </div>
+    <ul class="chat-list" id="chatList">
+      <!-- чаты подгружаются из js -->
+    </ul>
+    <div class="sidebar-bottom">
+      <span class="user-email" id="userEmail"></span>
+      <button class="logout-btn" id="logoutBtn">Выйти</button>
+    </div>
+  </aside>
+
+  <main class="chat-area">
+    <div class="messages" id="messages">
+      <p class="empty-hint" id="emptyHint">Начни разговор</p>
+    </div>
+
+    <div class="input-row">
+      <textarea
+        id="messageInput"
+        placeholder="Напиши сообщение..."
+        rows="1"
+      ></textarea>
+      <button id="sendBtn">Отправить</button>
+    </div>
+  </main>
+
+  <script type="module" src="js/index.js"></script>
+</body>
+</html>
