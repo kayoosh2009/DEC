@@ -6,7 +6,7 @@
 //!   memory::*  — save_point, load_all
 
 use anyhow::anyhow;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::ai::{MemoryPoint, Message};

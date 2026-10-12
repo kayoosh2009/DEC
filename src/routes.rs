@@ -14,7 +14,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 // --- Auth handlers ---
 mod auth {
-    use actix_web::{web, HttpResponse};
+    use actix_web::HttpResponse;
 
     pub async fn register() -> HttpResponse {
         HttpResponse::Ok().body("TODO: register")

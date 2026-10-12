@@ -4,6 +4,7 @@ mod database;
 mod routes;
 
 use actix_web::{web, App, HttpServer};
+use actix_files::Files;
 use config::AppConfig;
 
 #[actix_web::main]
@@ -24,6 +25,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(config.clone())
             .app_data(client.clone())
             .configure(routes::init)
+            .service(Files::new("/", "static").index_file("index.html"))
     })
     .bind(format!("{}:{}", host, port))?
     .run()
