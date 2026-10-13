@@ -5,17 +5,243 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DEC</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* ─── Navbar ─────────────────────────────────────────── */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background-color: #1E1E1E;
+            border-bottom: 1px solid #2A2A2A;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 100;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-icon {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-icon.open {
+            transform: rotate(90deg);
+        }
+
+        .navbar-id {
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 1px;
+        }
+
+        /* ─── Avatar ─────────────────────────────────────────── */
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #2A2A2A;
+            transition: border-color 0.2s;
+            object-fit: cover;
+        }
+
+        .avatar:hover {
+            border-color: #555;
+        }
+
+        /* ─── Logout popup ───────────────────────────────────── */
+        .logout-popup {
+            position: fixed;
+            top: 64px;
+            right: 16px;
+            background-color: #2A2A2A;
+            border: 1px solid #3A3A3A;
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 200;
+            min-width: 200px;
+        }
+
+        .logout-popup.visible {
+            display: flex;
+        }
+
+        .logout-popup-name {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .logout-btn {
+            background-color: #3A3A3A;
+            color: #F4F4F4;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-family: 'Kotyhoroshko', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #444;
+        }
+
+        .logout-cancel {
+            background: none;
+            border: none;
+            color: #666;
+            font-family: 'Kotyhoroshko', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .logout-cancel:hover {
+            color: #aaa;
+        }
+
+        /* ─── Side menu ──────────────────────────────────────── */
+        .side-menu {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            bottom: 0;
+            width: 260px;
+            background-color: #181818;
+            border-right: 1px solid #2A2A2A;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 90;
+            padding: 20px 16px;
+        }
+
+        .side-menu.open {
+            transform: translateX(0);
+        }
+
+        /* ─── Main content ───────────────────────────────────── */
+        .main {
+            margin-top: 56px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main.shifted {
+            margin-left: 260px;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Контент появится после реализации чата -->
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <img
+                src="img/menu.png"
+                alt="menu"
+                class="menu-icon"
+                id="menuIcon"
+                onclick="toggleMenu()"
+            >
+            <span class="navbar-id" id="navbarId"></span>
+        </div>
+        <img
+            src=""
+            alt="avatar"
+            class="avatar"
+            id="userAvatar"
+            onclick="toggleLogoutPopup()"
+        >
+    </nav>
+
+    <!-- Logout popup -->
+    <div class="logout-popup" id="logoutPopup">
+        <span class="logout-popup-name" id="logoutName"></span>
+        <button class="logout-btn" onclick="logout()">Выйти из аккаунта</button>
+        <button class="logout-cancel" onclick="toggleLogoutPopup()">Отмена</button>
+    </div>
+
+    <!-- Side menu -->
+    <div class="side-menu" id="sideMenu">
+        <!-- Наполним позже -->
+    </div>
+
+    <!-- Main content -->
+    <div class="main" id="main">
+        <!-- Чат появится здесь -->
+    </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        requireAuth();
+        // Генерируем ID один раз и сохраняем
+        function getSessionId() {
+            let id = sessionStorage.getItem('dec_id');
+            if (!id) {
+                id = 'DEC-' + Math.floor(1000 + Math.random() * 9000);
+                sessionStorage.setItem('dec_id', id);
+            }
+            return id;
+        }
+
+        document.getElementById('navbarId').textContent = getSessionId();
+
+        // Меню
+        let menuOpen = false;
+
+        function toggleMenu() {
+            menuOpen = !menuOpen;
+            document.getElementById('menuIcon').classList.toggle('open', menuOpen);
+            document.getElementById('sideMenu').classList.toggle('open', menuOpen);
+            document.getElementById('main').classList.toggle('shifted', menuOpen);
+        }
+
+        // Popup выхода
+        let popupOpen = false;
+
+        function toggleLogoutPopup() {
+            popupOpen = !popupOpen;
+            document.getElementById('logoutPopup').classList.toggle('visible', popupOpen);
+        }
+
+        // Закрывать popup при клике вне его
+        document.addEventListener('click', e => {
+            const popup = document.getElementById('logoutPopup');
+            const avatar = document.getElementById('userAvatar');
+            if (popupOpen && !popup.contains(e.target) && e.target !== avatar) {
+                popupOpen = false;
+                popup.classList.remove('visible');
+            }
+        });
+
+        // Инициализация
+        initFirebase().then(() => {
+            auth.onAuthStateChanged(user => {
+                if (!user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                // Аватар и имя
+                document.getElementById('userAvatar').src = user.photoURL || 'img/google.png';
+                document.getElementById('logoutName').textContent = user.displayName || user.email;
+            });
+        });
     </script>
 </body>
 </html>
