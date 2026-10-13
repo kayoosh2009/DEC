@@ -1,41 +1,75 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DEC</title>
-  <link rel="stylesheet" href="css/index.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEC — Вход</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-page {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .login-title {
+            font-size: 48px;
+            letter-spacing: 4px;
+        }
+
+        .login-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #2A2A2A;
+            color: #F4F4F4;
+            border: 1px solid #3A3A3A;
+            border-radius: 8px;
+            padding: 14px 28px;
+            font-family: 'Kotyhoroshko', sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .login-btn:hover {
+            background-color: #333333;
+        }
+
+        .login-btn img {
+            width: 22px;
+            height: 22px;
+        }
+    </style>
 </head>
 <body>
-  <aside class="sidebar">
-    <div class="sidebar-top">
-      <span class="logo">DEC</span>
-      <button class="new-chat-btn" id="newChatBtn">+ Новый чат</button>
-    </div>
-    <ul class="chat-list" id="chatList">
-      <!-- чаты подгружаются из js -->
-    </ul>
-    <div class="sidebar-bottom">
-      <span class="user-email" id="userEmail"></span>
-      <button class="logout-btn" id="logoutBtn">Выйти</button>
-    </div>
-  </aside>
-
-  <main class="chat-area">
-    <div class="messages" id="messages">
-      <p class="empty-hint" id="emptyHint">Начни разговор</p>
+    <div class="login-page">
+        <div class="login-box">
+            <div class="login-title">DEC</div>
+            <button class="login-btn" onclick="loginWithGoogle()">
+                <img src="img/google.png" alt="Google">
+                Войти через Google
+            </button>
+        </div>
     </div>
 
-    <div class="input-row">
-      <textarea
-        id="messageInput"
-        placeholder="Напиши сообщение..."
-        rows="1"
-      ></textarea>
-      <button id="sendBtn">Отправить</button>
-    </div>
-  </main>
-
-  <script type="module" src="js/index.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Если уже залогинен — сразу на главную
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) window.location.href = '/index.html';
+        });
+    </script>
 </body>
 </html>

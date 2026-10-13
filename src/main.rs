@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 mod ai;
 mod config;
 mod database;
@@ -19,6 +21,8 @@ async fn main() -> std::io::Result<()> {
 
     let host = config.host.clone();
     let port = config.port.clone();
+
+    println!("DEC запущен: http://{}:{}", host, port);
 
     HttpServer::new(move || {
         App::new()
