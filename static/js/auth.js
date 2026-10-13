@@ -2,9 +2,12 @@
 let auth = null;
 
 async function initFirebase() {
+    if (auth) return;
     const resp = await fetch('/api/config');
     const firebaseConfig = await resp.json();
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     auth = firebase.auth();
 }
 
