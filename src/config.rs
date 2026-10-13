@@ -9,6 +9,8 @@ pub struct AppConfig {
     pub ollama_model: String,
     pub firebase_project_id: String,
     pub firebase_api_key: String,
+    pub firebase_auth_domain: String,
+    pub firebase_app_id: String,
 }
 
 impl AppConfig {
@@ -21,6 +23,8 @@ impl AppConfig {
             ollama_model: env::var("OLLAMA_MODEL")?,
             firebase_project_id: env::var("FIREBASE_PROJECT_ID")?,
             firebase_api_key: env::var("FIREBASE_API_KEY")?,
+            firebase_auth_domain: env::var("FIREBASE_AUTH_DOMAIN")?,
+            firebase_app_id: env::var("FIREBASE_APP_ID")?,
         })
     }
 }
