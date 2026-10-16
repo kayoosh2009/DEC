@@ -151,12 +151,11 @@ body {
 
 .chat-disclaimer {
     font-size: 11px;
-    color: #444;
+    color: #666;
     text-align: center;
     max-width: 560px;
     line-height: 1.5;
 }
-
 .chat-input {
     flex: 1;
     background: none;
