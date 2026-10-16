@@ -44,6 +44,7 @@
             font-size: 14px;
             color: #888;
             letter-spacing: 1px;
+            font-weight: 700;
         }
 
         /* ─── Avatar ─────────────────────────────────────────── */
@@ -189,11 +190,15 @@
         </div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-bar">
-            <textarea id="chatInput" class="chat-input" placeholder="Message DEC..." rows="1" onInput="autoResize(this)"
-                onKeyDown="handleKey(event)"></textarea>
-            <button class="chat-send-btn" onclick="sendMessage()">
-                <img src="img/send.png" alt="send">
-            </button>
+            <div class="chat-input-row">
+                <textarea id="chatInput" class="chat-input" placeholder="Message DEC..." rows="1"
+                    onInput="autoResize(this)" onKeyDown="handleKey(event)"></textarea>
+                <button class="chat-send-btn" onclick="sendMessage()">
+                    <img src="img/send.png" alt="send">
+                </button>
+            </div>
+            <span class="chat-disclaimer">Do not send sensitive information in AI chat — we train AI models on your
+                chats. Training is fully anonymous, but please take care to protect yourself.</span>
         </div>
     </div>
 
