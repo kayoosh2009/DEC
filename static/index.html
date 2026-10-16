@@ -177,7 +177,19 @@
 
     <!-- Side menu -->
     <div class="side-menu" id="sideMenu">
-        <!-- Наполним позже -->
+        <div class="side-menu-actions">
+            <button class="side-menu-btn" onclick="newChat()">
+                <img src="img/new.png" alt="new">
+                New Chat
+            </button>
+            <button class="side-menu-btn" onclick="window.location.href='/dashboard.html'">
+                <img src="img/dashboard.png" alt="dashboard">
+                Dashboard
+            </button>
+        </div>
+        <div class="chat-list" id="chatList">
+            <!-- Чаты появятся здесь -->
+        </div>
     </div>
 
     <!-- Main content -->
