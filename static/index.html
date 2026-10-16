@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -145,27 +146,16 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-left">
-            <img
-                src="img/menu.png"
-                alt="menu"
-                class="menu-icon"
-                id="menuIcon"
-                onclick="toggleMenu()"
-            >
+            <img src="img/menu.png" alt="menu" class="menu-icon" id="menuIcon" onclick="toggleMenu()">
             <span class="navbar-id" id="navbarId"></span>
         </div>
-        <img
-            src=""
-            alt="avatar"
-            class="avatar"
-            id="userAvatar"
-            onclick="toggleLogoutPopup()"
-        >
+        <img src="" alt="avatar" class="avatar" id="userAvatar" onclick="toggleLogoutPopup()">
     </nav>
 
     <!-- Logout popup -->
@@ -194,7 +184,17 @@
 
     <!-- Main content -->
     <div class="main" id="main">
-        <!-- Чат появится здесь -->
+        <div class="chat-welcome" id="chatWelcome">
+            <span>DEC is listening</span>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-bar">
+            <textarea id="chatInput" class="chat-input" placeholder="Message DEC..." rows="1" onInput="autoResize(this)"
+                onKeyDown="handleKey(event)"></textarea>
+            <button class="chat-send-btn" onclick="sendMessage()">
+                <img src="img/send.png" alt="send">
+            </button>
+        </div>
     </div>
 
     <!-- Firebase -->
@@ -254,6 +254,40 @@
                 document.getElementById('logoutName').textContent = user.displayName || user.email;
             });
         });
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Скрываем welcome
+            document.getElementById('chatWelcome').classList.add('hidden');
+
+            input.value = '';
+            input.style.height = 'auto';
+
+            // TODO: отправка на сервер
+            console.log('Send:', text);
+        }
+
+        function newChat() {
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('chatWelcome').classList.remove('hidden');
+            document.getElementById('chatInput').value = '';
+        }
     </script>
 </body>
+
 </html>
