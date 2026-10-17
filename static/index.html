@@ -206,93 +206,19 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/index.js"></script>
     <script>
-        // Генерируем ID один раз и сохраняем
-        function getSessionId() {
-            let id = sessionStorage.getItem('dec_id');
-            if (!id) {
-                id = 'DEC-' + Math.floor(1000 + Math.random() * 9000);
-                sessionStorage.setItem('dec_id', id);
-            }
-            return id;
-        }
-
-        document.getElementById('navbarId').textContent = getSessionId();
-
-        // Меню
-        let menuOpen = false;
-
-        function toggleMenu() {
-            menuOpen = !menuOpen;
-            document.getElementById('menuIcon').classList.toggle('open', menuOpen);
-            document.getElementById('sideMenu').classList.toggle('open', menuOpen);
-            document.getElementById('main').classList.toggle('shifted', menuOpen);
-            document.querySelector('.chat-input-bar').classList.toggle('shifted', menuOpen);
-        }
-
-        // Popup выхода
-        let popupOpen = false;
-
-        function toggleLogoutPopup() {
-            popupOpen = !popupOpen;
-            document.getElementById('logoutPopup').classList.toggle('visible', popupOpen);
-        }
-
-        // Закрывать popup при клике вне его
-        document.addEventListener('click', e => {
-            const popup = document.getElementById('logoutPopup');
-            const avatar = document.getElementById('userAvatar');
-            if (popupOpen && !popup.contains(e.target) && e.target !== avatar) {
-                popupOpen = false;
-                popup.classList.remove('visible');
-            }
-        });
-
-        // Инициализация
         initFirebase().then(() => {
             auth.onAuthStateChanged(user => {
                 if (!user) {
                     window.location.href = '/login.html';
                     return;
                 }
-                // Аватар и имя
                 document.getElementById('userAvatar').src = user.photoURL || 'img/google.png';
                 document.getElementById('logoutName').textContent = user.displayName || user.email;
+                initChat(user);
             });
         });
-
-        function autoResize(el) {
-            el.style.height = 'auto';
-            el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-        }
-
-        function handleKey(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            // Скрываем welcome
-            document.getElementById('chatWelcome').classList.add('hidden');
-
-            input.value = '';
-            input.style.height = 'auto';
-
-            // TODO: отправка на сервер
-            console.log('Send:', text);
-        }
-
-        function newChat() {
-            document.getElementById('chatMessages').innerHTML = '';
-            document.getElementById('chatWelcome').classList.remove('hidden');
-            document.getElementById('chatInput').value = '';
-        }
     </script>
 </body>
 
