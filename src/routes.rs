@@ -8,6 +8,8 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         // Chat
         .route("/chat/send",     web::post().to(chat::send_message))
         .route("/chat/star",     web::post().to(chat::star_message))
+        .route("/chat/list",     web::get().to(chat::list_chats))
+        .route("/chat/save",     web::post().to(chat::save_chat))
         // Config
         .route("/api/config",    web::get().to(config_handler::get_config))
         // Memory
@@ -52,6 +54,87 @@ mod chat {
     }
 
     #[derive(Deserialize)]
+    pub struct SaveChatRequest {
+        pub chat_id: String,
+        pub title: String,
+        pub timestamp: String,
+        pub id_token: String,
+        pub uid: String,
+    }
+
+    pub async fn save_chat(
+        body: web::Json<SaveChatRequest>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}",
+            config.firebase_project_id, body.uid, body.chat_id
+        );
+
+        let result = client
+            .patch(&url)
+            .bearer_auth(&body.id_token)
+            .json(&serde_json::json!({
+                "fields": {
+                    "title":     { "stringValue": body.title },
+                    "timestamp": { "stringValue": body.timestamp }
+                }
+            }))
+            .send()
+            .await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().body("ok"),
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
+    }
+
+    pub async fn list_chats(
+        query: web::Query<std::collections::HashMap<String, String>>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
+        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats",
+            config.firebase_project_id, uid
+        );
+
+        let resp = client
+            .get(&url)
+            .bearer_auth(id_token)
+            .send()
+            .await;
+
+        match resp {
+            Ok(r) => {
+                let data: serde_json::Value = r.json().await.unwrap_or_default();
+                let chats: Vec<serde_json::Value> = data["documents"]
+                    .as_array()
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .map(|doc| {
+                        let name = doc["name"].as_str().unwrap_or("");
+                        let chat_id = name.split('/').last().unwrap_or("");
+                        serde_json::json!({
+                            "chat_id":   chat_id,
+                            "title":     doc["fields"]["title"]["stringValue"].as_str().unwrap_or("Untitled"),
+                            "timestamp": doc["fields"]["timestamp"]["stringValue"].as_str().unwrap_or("")
+                        })
+                    })
+                    .collect();
+
+                HttpResponse::Ok().json(chats)
+            }
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct StarRequest {
     pub struct StarRequest {
         pub chat_id: String,
         pub msg_id: String,

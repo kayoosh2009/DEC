@@ -29,6 +29,7 @@ function initChat(user) {
     });
 
     newChat();
+    loadChatList();
 }
 
 // ─── Menu ─────────────────────────────────────────────────────────────────────
@@ -48,11 +49,56 @@ function toggleLogoutPopup() {
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
+let currentChatTitle = null;
+let isFirstMessage = true;
+
 function newChat() {
     currentChatId = crypto.randomUUID();
+    currentChatTitle = null;
+    isFirstMessage = true;
     document.getElementById('chatMessages').innerHTML = '';
     document.getElementById('chatWelcome').classList.remove('hidden');
     document.getElementById('chatInput').value = '';
+}
+
+async function loadChatList() {
+    const idToken = await currentUser.getIdToken();
+    const resp = await fetch(`/chat/list?uid=${currentUser.uid}&id_token=${encodeURIComponent(idToken)}`);
+    if (!resp.ok) return;
+
+    const chats = await resp.json();
+    chats.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+    const list = document.getElementById('chatList');
+    list.innerHTML = '';
+
+    for (const chat of chats) {
+        const item = document.createElement('div');
+        item.classList.add('chat-item');
+        item.onclick = () => openChat(chat.chat_id);
+
+        const title = document.createElement('div');
+        title.classList.add('chat-item-title');
+        title.textContent = chat.title;
+
+        const date = document.createElement('div');
+        date.classList.add('chat-item-date');
+        date.textContent = new Date(chat.timestamp).toLocaleDateString('ru-RU', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+        });
+
+        item.appendChild(title);
+        item.appendChild(date);
+        list.appendChild(item);
+    }
+}
+
+async function openChat(chatId) {
+    currentChatId = chatId;
+    isFirstMessage = false;
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('chatWelcome').classList.add('hidden');
+    // TODO: загрузить сообщения чата
 }
 
 function autoResize(el) {
@@ -125,17 +171,47 @@ async function sendMessage() {
     const text = input.value.trim();
     if (!text || !currentUser) return;
 
-    // Скрываем welcome
     document.getElementById('chatWelcome').classList.add('hidden');
 
     input.value = '';
     input.style.height = 'auto';
 
-    // Показываем сообщение пользователя
     appendMessage('user', text);
 
-    // Получаем токен
     const idToken = await currentUser.getIdToken();
+    const timestamp = new Date().toISOString();
+
+    // Если первое сообщение — генерируем заголовок
+    if (isFirstMessage) {
+        isFirstMessage = false;
+        const titleResp = await fetch('/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: currentChatId,
+                message: `Give this chat a short title (max 5 words) based on this first message. Reply with the title only, no punctuation: "${text}"`,
+                timestamp,
+                id_token: idToken,
+                uid: currentUser.uid,
+            })
+        });
+        if (titleResp.ok) {
+            const titleData = await titleResp.json();
+            currentChatTitle = titleData.message.trim();
+            await fetch('/chat/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: currentChatId,
+                    title: currentChatTitle,
+                    timestamp,
+                    id_token: idToken,
+                    uid: currentUser.uid,
+                })
+            });
+            await loadChatList();
+        }
+    }
 
     const resp = await fetch('/chat/send', {
         method: 'POST',
@@ -143,7 +219,7 @@ async function sendMessage() {
         body: JSON.stringify({
             chat_id: currentChatId,
             message: text,
-            timestamp: new Date().toISOString(),
+            timestamp,
             id_token: idToken,
             uid: currentUser.uid,
         })
@@ -155,5 +231,6 @@ async function sendMessage() {
     }
 
     const data = await resp.json();
-    appendMessage('ai', data.message);
+    appendMessage('ai', data.message, data.timestamp);
+    await loadChatList();
 }
