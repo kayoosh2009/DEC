@@ -135,7 +135,6 @@ mod chat {
 
     #[derive(Deserialize)]
     pub struct StarRequest {
-    pub struct StarRequest {
         pub chat_id: String,
         pub msg_id: String,
         pub message: Message,
