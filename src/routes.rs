@@ -13,6 +13,9 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/chat/messages", web::get().to(chat::get_messages))
         // Config
         .route("/api/config",    web::get().to(config_handler::get_config))
+        // Dashboard
+        .route("/dashboard/stats", web::get().to(dashboard::platform_stats))
+        .route("/dashboard/user",  web::get().to(dashboard::user_stats))
         // Memory
         .route("/memory/list",   web::get().to(memory::list))
         .route("/memory/add",    web::post().to(memory::add));
@@ -341,6 +344,109 @@ mod memory {
 
     pub async fn add() -> HttpResponse {
         HttpResponse::Ok().body("TODO: memory add")
+    }
+}
+
+// --- Dashboard handlers ---
+mod dashboard {
+    use actix_web::{web, HttpResponse};
+    use std::collections::HashMap;
+    use crate::config::AppConfig;
+
+    pub async fn platform_stats(
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/platform/stats",
+            config.firebase_project_id
+        );
+
+        let resp = client.get(&url).send().await;
+
+        match resp {
+            Ok(r) => {
+                let data: serde_json::Value = r.json().await.unwrap_or_default();
+                let tokens = data["fields"]["tokens_used"]["integerValue"]
+                    .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+                let messages = data["fields"]["messages_count"]["integerValue"]
+                    .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+
+                HttpResponse::Ok().json(serde_json::json!({
+                    "tokens_used":    tokens,
+                    "messages_count": messages
+                }))
+            }
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
+    }
+
+    pub async fn user_stats(
+        query: web::Query<HashMap<String, String>>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
+        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+
+        // Загружаем все чаты пользователя
+        let chats_url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats",
+            config.firebase_project_id, uid
+        );
+
+        let chats_resp: serde_json::Value = client
+            .get(&chats_url)
+            .bearer_auth(id_token)
+            .send().await
+            .unwrap()
+            .json().await
+            .unwrap_or_default();
+
+        let now = chrono::Utc::now();
+        let month_prefix = now.format("%Y-%m").to_string();
+        let mut tokens_this_month: u64 = 0;
+        let mut daily_tokens: HashMap<String, u64> = HashMap::new();
+
+        // Для каждого чата грузим сообщения
+        if let Some(chats) = chats_resp["documents"].as_array() {
+            for chat in chats {
+                let chat_name = chat["name"].as_str().unwrap_or("");
+                let chat_id = chat_name.split('/').last().unwrap_or("");
+
+                let msgs_url = format!(
+                    "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
+                    config.firebase_project_id, uid, chat_id
+                );
+
+                let msgs_resp: serde_json::Value = client
+                    .get(&msgs_url)
+                    .bearer_auth(id_token)
+                    .send().await
+                    .unwrap()
+                    .json().await
+                    .unwrap_or_default();
+
+                if let Some(msgs) = msgs_resp["documents"].as_array() {
+                    for msg in msgs {
+                        let ts = msg["fields"]["timestamp"]["stringValue"].as_str().unwrap_or("");
+                        let tokens = msg["fields"]["tokens"]["integerValue"]
+                            .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+
+                        if ts.starts_with(&month_prefix) {
+                            tokens_this_month += tokens;
+                            let day = &ts[..10]; // "YYYY-MM-DD"
+                            *daily_tokens.entry(day.to_string()).or_insert(0) += tokens;
+                        }
+                    }
+                }
+            }
+        }
+
+        HttpResponse::Ok().json(serde_json::json!({
+            "tokens_this_month": tokens_this_month,
+            "daily_tokens":      daily_tokens
+        }))
     }
 }
 
