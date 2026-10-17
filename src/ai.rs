@@ -72,19 +72,35 @@ pub async fn generate_response(
     ollama_api_key: &str,
     model: &str,
     user_message: &str,
-    recent_messages: Vec<Message>,   // last 5 messages from current chat
-    memory_points: Vec<MemoryPoint>, // diary points from Firebase
+    timestamp: &str,
+    recent_messages: Vec<Message>,
+    starred_messages: Vec<Message>,
+    memory_points: Vec<MemoryPoint>,
 ) -> anyhow::Result<String> {
     let instructions = load_instructions(user_message);
 
-    // Build system prompt: instructions + diary memory points
+    // Build system prompt
     let mut system_content = instructions;
 
+    // Время пользователя
+    system_content.push_str(&format!("## Current time\n{}\n\n", timestamp));
+
+    // Избранные сообщения
+    if !starred_messages.is_empty() {
+        system_content.push_str("## Important messages (marked by user)\n");
+        for msg in &starred_messages {
+            system_content.push_str(&format!("- [{}] {}\n", msg.role, msg.content));
+        }
+        system_content.push_str("\n");
+    }
+
+    // Memory points
     if !memory_points.is_empty() {
         system_content.push_str("## Chat diary (past memory points)\n");
         for point in &memory_points {
             system_content.push_str(&format!("- [{}] {}\n", point.timestamp, point.summary));
         }
+        system_content.push_str("\n");
     }
 
     // Assemble messages: system -> recent history -> current user message
