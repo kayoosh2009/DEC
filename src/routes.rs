@@ -85,8 +85,14 @@ mod chat {
             .await;
 
         match result {
-            Ok(_) => HttpResponse::Ok().body("ok"),
-            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            Ok(r) => {
+                println!("[save_chat] status: {}", r.status());
+                HttpResponse::Ok().body("ok")
+            },
+            Err(e) => {
+                println!("[save_chat] error: {}", e);
+                HttpResponse::InternalServerError().body(e.to_string())
+            },
         }
     }
 
@@ -112,6 +118,7 @@ mod chat {
         match resp {
             Ok(r) => {
                 let data: serde_json::Value = r.json().await.unwrap_or_default();
+                println!("[list_chats] response: {}", data);
                 let chats: Vec<serde_json::Value> = data["documents"]
                     .as_array()
                     .unwrap_or(&vec![])
