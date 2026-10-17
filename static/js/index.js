@@ -98,7 +98,15 @@ async function openChat(chatId) {
     isFirstMessage = false;
     document.getElementById('chatMessages').innerHTML = '';
     document.getElementById('chatWelcome').classList.add('hidden');
-    // TODO: загрузить сообщения чата
+
+    const idToken = await currentUser.getIdToken();
+    const resp = await fetch(`/chat/messages?uid=${currentUser.uid}&id_token=${encodeURIComponent(idToken)}&chat_id=${chatId}`);
+    if (!resp.ok) return;
+
+    const msgs = await resp.json();
+    for (const msg of msgs) {
+        appendMessage(msg.role === 'assistant' ? 'ai' : msg.role, msg.content, msg.timestamp);
+    }
 }
 
 function autoResize(el) {

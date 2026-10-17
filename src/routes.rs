@@ -10,6 +10,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/chat/star",     web::post().to(chat::star_message))
         .route("/chat/list",     web::get().to(chat::list_chats))
         .route("/chat/save",     web::post().to(chat::save_chat))
+        .route("/chat/messages", web::get().to(chat::get_messages))
         // Config
         .route("/api/config",    web::get().to(config_handler::get_config))
         // Memory
@@ -60,6 +61,51 @@ mod chat {
         pub timestamp: String,
         pub id_token: String,
         pub uid: String,
+    }
+
+    pub async fn get_messages(
+        query: web::Query<std::collections::HashMap<String, String>>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
+        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+        let chat_id = match query.get("chat_id") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing chat_id") };
+
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
+            config.firebase_project_id, uid, chat_id
+        );
+
+        let resp = client
+            .get(&url)
+            .bearer_auth(id_token)
+            .send()
+            .await;
+
+        match resp {
+            Ok(r) => {
+                let data: serde_json::Value = r.json().await.unwrap_or_default();
+                let mut msgs: Vec<serde_json::Value> = data["documents"]
+                    .as_array()
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .map(|doc| serde_json::json!({
+                        "role":      doc["fields"]["role"]["stringValue"].as_str().unwrap_or(""),
+                        "content":   doc["fields"]["content"]["stringValue"].as_str().unwrap_or(""),
+                        "timestamp": doc["fields"]["timestamp"]["stringValue"].as_str().unwrap_or(""),
+                        "starred":   doc["fields"]["starred"]["booleanValue"].as_bool().unwrap_or(false)
+                    }))
+                    .collect();
+
+                msgs.sort_by(|a, b| {
+                    a["timestamp"].as_str().unwrap_or("").cmp(b["timestamp"].as_str().unwrap_or(""))
+                });
+
+                HttpResponse::Ok().json(msgs)
+            }
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
     }
 
     pub async fn save_chat(
