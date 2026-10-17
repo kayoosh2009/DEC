@@ -99,6 +99,7 @@ pub mod messages {
         msg_id: &str,
         message: &Message,
         timestamp: &str,
+        starred: bool,
     ) -> anyhow::Result<()> {
         let url = format!(
             "{}/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages/{}",
@@ -112,7 +113,8 @@ pub mod messages {
                 "fields": {
                     "role":      { "stringValue": message.role },
                     "content":   { "stringValue": message.content },
-                    "timestamp": { "stringValue": timestamp }
+                    "timestamp": { "stringValue": timestamp },
+                    "starred":   { "booleanValue": starred }
                 }
             }))
             .send()
@@ -121,13 +123,14 @@ pub mod messages {
         Ok(())
     }
 
-    /// Returns last 5 messages sorted by timestamp
+    /// Returns last N messages sorted by timestamp
     pub async fn load_recent(
         client: &reqwest::Client,
         project_id: &str,
         id_token: &str,
         uid: &str,
         chat_id: &str,
+        limit: usize,
     ) -> anyhow::Result<Vec<Message>> {
         let url = format!(
             "{}/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
@@ -159,14 +162,56 @@ pub mod messages {
         let recent = pairs
             .into_iter()
             .rev()
-            .take(5)
+            .take(limit)
             .rev()
             .map(|(_, m)| m)
             .collect();
 
         Ok(recent)
     }
-}
+
+    /// Returns all starred messages
+    pub async fn load_starred(
+        client: &reqwest::Client,
+        project_id: &str,
+        id_token: &str,
+        uid: &str,
+        chat_id: &str,
+    ) -> anyhow::Result<Vec<Message>> {
+        let url = format!(
+            "{}/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
+            FIRESTORE_BASE, project_id, uid, chat_id
+        );
+
+        let resp: Value = client
+            .get(&url)
+            .bearer_auth(id_token)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let mut starred: Vec<(String, Message)> = resp["documents"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter(|doc| {
+                doc["fields"]["starred"]["booleanValue"]
+                    .as_bool()
+                    .unwrap_or(false)
+            })
+            .map(|doc| {
+                let role      = super::get_str(doc, "role");
+                let content   = super::get_str(doc, "content");
+                let timestamp = super::get_str(doc, "timestamp");
+                (timestamp, Message { role, content })
+            })
+            .collect();
+
+        starred.sort_by(|a, b| a.0.cmp(&b.0));
+
+        Ok(starred.into_iter().map(|(_, m)| m).collect())
+    }
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 
