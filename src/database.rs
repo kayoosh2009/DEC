@@ -212,6 +212,7 @@ pub mod messages {
 
         Ok(starred.into_iter().map(|(_, m)| m).collect())
     }
+}
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 
