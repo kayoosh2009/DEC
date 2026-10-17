@@ -7,6 +7,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/auth/login",    web::post().to(auth::login))
         // Chat
         .route("/chat/send",     web::post().to(chat::send_message))
+        .route("/chat/star",     web::post().to(chat::star_message))
         // Config
         .route("/api/config",    web::get().to(config_handler::get_config))
         // Memory
@@ -48,6 +49,39 @@ mod chat {
     pub struct SendResponse {
         pub message: String,
         pub timestamp: String,
+    }
+
+    #[derive(Deserialize)]
+    pub struct StarRequest {
+        pub chat_id: String,
+        pub msg_id: String,
+        pub message: Message,
+        pub timestamp: String,
+        pub id_token: String,
+        pub uid: String,
+    }
+
+    pub async fn star_message(
+        body: web::Json<StarRequest>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let result = messages::save(
+            &client,
+            &config.firebase_project_id,
+            &body.id_token,
+            &body.uid,
+            &body.chat_id,
+            &body.msg_id,
+            &body.message,
+            &body.timestamp,
+            true,
+        ).await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().body("ok"),
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
     }
 
     pub async fn send_message(

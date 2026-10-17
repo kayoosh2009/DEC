@@ -196,3 +196,69 @@ body {
     height: 20px;
     opacity: 0.8;
 }
+
+.message {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+}
+
+.message-user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.message-ai {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message-bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.message-user .message-bubble {
+    background-color: #2A2A2A;
+    color: #F4F4F4;
+    border-bottom-right-radius: 4px;
+}
+
+.message-ai .message-bubble {
+    background-color: #242424;
+    color: #E0E0E0;
+    border-bottom-left-radius: 4px;
+}
+
+.message-actions {
+    display: flex;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.star-btn {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.star-btn:hover {
+    color: #aaa;
+}
+
+.star-btn.starred {
+    color: #f0c040;
+}
