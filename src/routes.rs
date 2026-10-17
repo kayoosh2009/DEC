@@ -280,7 +280,25 @@ mod chat {
                     false,
                 ).await;
 
-                // 6. Сохраняем ответ ИИ
+                // 6. Считаем токены (примерно: 1 токен ~ 4 символа)
+                let tokens = ((body.message.len() + text.len()) / 4) as u64;
+
+                // 7. Сохраняем сообщение пользователя
+                let user_msg = Message { role: "user".to_string(), content: body.message.clone() };
+                let _ = messages::save(
+                    &client,
+                    &config.firebase_project_id,
+                    &body.id_token,
+                    &body.uid,
+                    &body.chat_id,
+                    &uuid::Uuid::new_v4().to_string(),
+                    &user_msg,
+                    &body.timestamp,
+                    false,
+                    tokens / 2,
+                ).await;
+
+                // 8. Сохраняем ответ ИИ
                 let ai_msg = Message { role: "assistant".to_string(), content: text.clone() };
                 let ai_timestamp = chrono::Utc::now().to_rfc3339();
                 let _ = messages::save(
@@ -293,6 +311,14 @@ mod chat {
                     &ai_msg,
                     &ai_timestamp,
                     false,
+                    tokens / 2,
+                ).await;
+
+                // 9. Обновляем глобальную статистику
+                let _ = messages::increment_platform_stats(
+                    &client,
+                    &config.firebase_project_id,
+                    tokens,
                 ).await;
 
                 HttpResponse::Ok().json(SendResponse {

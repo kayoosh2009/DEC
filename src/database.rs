@@ -100,6 +100,7 @@ pub mod messages {
         message: &Message,
         timestamp: &str,
         starred: bool,
+        tokens: u64,
     ) -> anyhow::Result<()> {
         let url = format!(
             "{}/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages/{}",
@@ -114,7 +115,8 @@ pub mod messages {
                     "role":      { "stringValue": message.role },
                     "content":   { "stringValue": message.content },
                     "timestamp": { "stringValue": timestamp },
-                    "starred":   { "booleanValue": starred }
+                    "starred":   { "booleanValue": starred },
+                    "tokens":    { "integerValue": tokens.to_string() }
                 }
             }))
             .send()
@@ -211,6 +213,49 @@ pub mod messages {
         starred.sort_by(|a, b| a.0.cmp(&b.0));
 
         Ok(starred.into_iter().map(|(_, m)| m).collect())
+    }
+
+    /// Increment platform-wide token counter and message count
+    pub async fn increment_platform_stats(
+        client: &reqwest::Client,
+        project_id: &str,
+        tokens: u64,
+    ) -> anyhow::Result<()> {
+        let url = format!(
+            "{}/projects/{}/databases/(default)/documents/platform/stats",
+            FIRESTORE_BASE, project_id
+        );
+
+        // First read current values
+        let resp: Value = client
+            .get(&url)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let current_tokens = resp["fields"]["tokens_used"]["integerValue"]
+            .as_str()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0);
+
+        let current_messages = resp["fields"]["messages_count"]["integerValue"]
+            .as_str()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0);
+
+        client
+            .patch(&url)
+            .json(&json!({
+                "fields": {
+                    "tokens_used":    { "integerValue": (current_tokens + tokens).to_string() },
+                    "messages_count": { "integerValue": (current_messages + 1).to_string() }
+                }
+            }))
+            .send()
+            .await?;
+
+        Ok(())
     }
 }
 
