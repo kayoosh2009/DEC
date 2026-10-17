@@ -214,6 +214,7 @@ mod chat {
             &body.message,
             &body.timestamp,
             true,
+            0,
         ).await;
 
         match result {
@@ -269,20 +270,6 @@ mod chat {
 
         match ai_response {
             Ok(text) => {
-                // 5. Сохраняем сообщение пользователя
-                let user_msg = Message { role: "user".to_string(), content: body.message.clone() };
-                let _ = messages::save(
-                    &client,
-                    &config.firebase_project_id,
-                    &body.id_token,
-                    &body.uid,
-                    &body.chat_id,
-                    &uuid::Uuid::new_v4().to_string(),
-                    &user_msg,
-                    &body.timestamp,
-                    false,
-                ).await;
-
                 // 6. Считаем токены (примерно: 1 токен ~ 4 символа)
                 let tokens = ((body.message.len() + text.len()) / 4) as u64;
 
