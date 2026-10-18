@@ -99,7 +99,7 @@ body {
 }
 
 .chat-messages {
-    padding: 80px 20px 100px;
+    padding: 80px 20px 160px;
     max-width: 720px;
     margin: 0 auto;
     display: flex;
