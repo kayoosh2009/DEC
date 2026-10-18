@@ -10,6 +10,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/chat/star",     web::post().to(chat::star_message))
         .route("/chat/list",     web::get().to(chat::list_chats))
         .route("/chat/save",     web::post().to(chat::save_chat))
+        .route("/chat/delete",   web::post().to(chat::delete_chat))
         .route("/chat/messages", web::get().to(chat::get_messages))
         // Config
         .route("/api/config",    web::get().to(config_handler::get_config))
@@ -62,6 +63,7 @@ mod chat {
         pub chat_id: String,
         pub title: String,
         pub timestamp: String,
+        pub pinned: Option<bool>,
         pub id_token: String,
         pub uid: String,
     }
@@ -127,7 +129,8 @@ mod chat {
             .json(&serde_json::json!({
                 "fields": {
                     "title":     { "stringValue": body.title },
-                    "timestamp": { "stringValue": body.timestamp }
+                    "timestamp": { "stringValue": body.timestamp },
+                    "pinned":    { "booleanValue": body.pinned.unwrap_or(false) }
                 }
             }))
             .send()
@@ -142,6 +145,35 @@ mod chat {
                 println!("[save_chat] error: {}", e);
                 HttpResponse::InternalServerError().body(e.to_string())
             },
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct DeleteChatRequest {
+        pub chat_id: String,
+        pub id_token: String,
+        pub uid: String,
+    }
+
+    pub async fn delete_chat(
+        body: web::Json<DeleteChatRequest>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}",
+            config.firebase_project_id, body.uid, body.chat_id
+        );
+
+        let result = client
+            .delete(&url)
+            .bearer_auth(&body.id_token)
+            .send()
+            .await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().body("ok"),
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
         }
     }
 
@@ -178,7 +210,8 @@ mod chat {
                         serde_json::json!({
                             "chat_id":   chat_id,
                             "title":     doc["fields"]["title"]["stringValue"].as_str().unwrap_or("Untitled"),
-                            "timestamp": doc["fields"]["timestamp"]["stringValue"].as_str().unwrap_or("")
+                            "timestamp": doc["fields"]["timestamp"]["stringValue"].as_str().unwrap_or(""),
+                            "pinned":    doc["fields"]["pinned"]["booleanValue"].as_bool().unwrap_or(false)
                         })
                     })
                     .collect();
