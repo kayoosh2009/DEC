@@ -217,20 +217,22 @@ async function finishRename(input, chatId) {
 
 async function deleteChat() {
     if (!contextMenuChat) return;
+    const chat = contextMenuChat;
+    closeContextMenu();
+
     const idToken = await currentUser.getIdToken();
 
     await fetch('/chat/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            chat_id: contextMenuChat.chat_id,
+            chat_id: chat.chat_id,
             id_token: idToken,
             uid: currentUser.uid,
         })
     });
 
-    closeContextMenu();
-    if (currentChatId === contextMenuChat.chat_id) newChat();
+    if (currentChatId === chat.chat_id) newChat();
     await loadChatList();
 }
 
