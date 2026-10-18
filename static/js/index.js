@@ -70,7 +70,13 @@ async function loadChatList() {
     if (!resp.ok) return;
 
     const chats = await resp.json();
-    chats.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+    // Закреплённые вверху, остальные по дате
+    chats.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return b.timestamp.localeCompare(a.timestamp);
+    });
 
     const list = document.getElementById('chatList');
     list.innerHTML = '';
@@ -78,7 +84,15 @@ async function loadChatList() {
     for (const chat of chats) {
         const item = document.createElement('div');
         item.classList.add('chat-item');
-        item.onclick = () => openChat(chat.chat_id);
+        if (chat.pinned) item.classList.add('chat-item-pinned');
+        item.dataset.chatId = chat.chat_id;
+
+        const row = document.createElement('div');
+        row.classList.add('chat-item-row');
+
+        const body = document.createElement('div');
+        body.classList.add('chat-item-body');
+        body.onclick = () => openChat(chat.chat_id);
 
         const title = document.createElement('div');
         title.classList.add('chat-item-title');
@@ -90,11 +104,138 @@ async function loadChatList() {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
-        item.appendChild(title);
-        item.appendChild(date);
+        body.appendChild(title);
+        body.appendChild(date);
+
+        const dotsBtn = document.createElement('button');
+        dotsBtn.classList.add('chat-dots-btn');
+        dotsBtn.innerHTML = '<img src="img/dots.png" alt="...">';
+        dotsBtn.onclick = (e) => {
+            e.stopPropagation();
+            showChatMenu(e, chat);
+        };
+
+        row.appendChild(body);
+        row.appendChild(dotsBtn);
+        item.appendChild(row);
         list.appendChild(item);
     }
 }
+
+// ─── Context menu ─────────────────────────────────────────────────────────────
+
+let contextMenuChat = null;
+
+function showChatMenu(e, chat) {
+    closeContextMenu();
+
+    contextMenuChat = chat;
+    const menu = document.getElementById('chatContextMenu');
+
+    // Пункт закрепить/открепить
+    document.getElementById('menuPinLabel').textContent = chat.pinned ? 'Unpin' : 'Pin';
+
+    menu.classList.add('visible');
+
+    // Позиционируем около кнопки
+    const rect = e.target.closest('button').getBoundingClientRect();
+    menu.style.top = rect.bottom + 4 + 'px';
+    menu.style.left = rect.left - 120 + 'px';
+}
+
+function closeContextMenu() {
+    document.getElementById('chatContextMenu').classList.remove('visible');
+    contextMenuChat = null;
+}
+
+async function pinChat() {
+    if (!contextMenuChat) return;
+    const idToken = await currentUser.getIdToken();
+    const newPinned = !contextMenuChat.pinned;
+
+    await fetch('/chat/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: contextMenuChat.chat_id,
+            title: contextMenuChat.title,
+            timestamp: contextMenuChat.timestamp,
+            pinned: newPinned,
+            id_token: idToken,
+            uid: currentUser.uid,
+        })
+    });
+
+    closeContextMenu();
+    await loadChatList();
+}
+
+function startRename() {
+    if (!contextMenuChat) return;
+    closeContextMenu();
+
+    const item = document.querySelector(`[data-chat-id="${contextMenuChat.chat_id}"]`);
+    if (!item) return;
+
+    const titleEl = item.querySelector('.chat-item-title');
+    const currentTitle = titleEl.textContent.replace('📌 ', '');
+
+    const input = document.createElement('input');
+    input.classList.add('chat-rename-input');
+    input.value = currentTitle;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    input.onblur = () => finishRename(input, contextMenuChat?.chat_id || item.dataset.chatId);
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') input.blur();
+        if (e.key === 'Escape') loadChatList();
+    };
+}
+
+async function finishRename(input, chatId) {
+    const newTitle = input.value.trim();
+    if (!newTitle) { await loadChatList(); return; }
+
+    const idToken = await currentUser.getIdToken();
+    await fetch('/chat/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            title: newTitle,
+            timestamp: new Date().toISOString(),
+            id_token: idToken,
+            uid: currentUser.uid,
+        })
+    });
+
+    await loadChatList();
+}
+
+async function deleteChat() {
+    if (!contextMenuChat) return;
+    const idToken = await currentUser.getIdToken();
+
+    await fetch('/chat/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: contextMenuChat.chat_id,
+            id_token: idToken,
+            uid: currentUser.uid,
+        })
+    });
+
+    closeContextMenu();
+    if (currentChatId === contextMenuChat.chat_id) newChat();
+    await loadChatList();
+}
+
+// Закрывать меню при клике вне
+document.addEventListener('click', () => closeContextMenu());
 
 async function openChat(chatId) {
     currentChatId = chatId;

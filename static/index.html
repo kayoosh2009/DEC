@@ -177,6 +177,13 @@
                 <img src="img/dashboard.png" alt="dashboard">
                 Dashboard
             </button>
+            <button class="side-menu-btn" onclick="window.location.href='/memory.html'">
+                <img src="img/memory.png" alt="memory">
+                Memory
+            </button>
+        </div>
+        <div class="side-menu-bottom">
+            <img src="img/kofi.png" alt="ko-fi" class="kofi-btn" onclick="window.open('https://ko-fi.com/kayoosh', '_blank')">
         </div>
         <div class="chat-list" id="chatList">
             <!-- Чаты появятся здесь -->
@@ -200,6 +207,15 @@
             <span class="chat-disclaimer">Do not send sensitive information in AI chat — we train AI models on your
                 chats. Training is fully anonymous, but please take care to protect yourself.</span>
         </div>
+    </div>
+
+    <!-- Chat context menu -->
+    <div class="chat-context-menu" id="chatContextMenu">
+        <button class="context-menu-item" onclick="pinChat()">
+            <span id="menuPinLabel">Pin</span>
+        </button>
+        <button class="context-menu-item" onclick="startRename()">Rename</button>
+        <button class="context-menu-item danger" onclick="deleteChat()">Delete</button>
     </div>
 
     <!-- Firebase -->

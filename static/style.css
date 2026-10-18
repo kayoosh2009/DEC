@@ -99,9 +99,9 @@ body {
 }
 
 .chat-messages {
-    padding: 80px 20px 20px;
+    padding: 80px 20px 180px;
     max-width: 720px;
-    margin: 0 auto 140px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -109,7 +109,7 @@ body {
 
 .chat-input-bar {
     position: fixed;
-    bottom: 36px;
+    bottom: 0;
     left: 0;
     right: 0;
     display: flex;
@@ -117,7 +117,8 @@ body {
     align-items: center;
     gap: 10px;
     transition: left 0.3s ease;
-    padding: 0 16px;
+    padding: 16px 16px 24px;
+    background-color: #1E1E1E;
 }
 
 .chat-input-bar.shifted {
@@ -249,4 +250,139 @@ body {
 
 .star-btn.starred {
     color: #f0c040;
+}
+
+/* ─── Side menu bottom ───────────────────────────────── */
+.side-menu-bottom {
+    position: absolute;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+}
+
+.kofi-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    object-fit: cover;
+}
+
+.kofi-btn:hover {
+    opacity: 1;
+}
+
+/* ─── Chat item with dots ────────────────────────────── */
+.chat-item {
+    position: relative;
+}
+
+.chat-item-body {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.chat-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.chat-item-row:hover {
+    background-color: #2A2A2A;
+}
+
+.chat-item-row:hover .chat-dots-btn {
+    opacity: 1;
+}
+
+.chat-dots-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 4px;
+}
+
+.chat-dots-btn:hover {
+    background-color: #3A3A3A;
+}
+
+.chat-dots-btn img {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+    display: block;
+}
+
+/* ─── Chat context menu ──────────────────────────────── */
+.chat-context-menu {
+    position: fixed;
+    background-color: #2A2A2A;
+    border: 1px solid #3A3A3A;
+    border-radius: 10px;
+    padding: 6px;
+    z-index: 300;
+    min-width: 160px;
+    display: none;
+}
+
+.chat-context-menu.visible {
+    display: block;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #E0E0E0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+}
+
+.context-menu-item:hover {
+    background-color: #3A3A3A;
+}
+
+.context-menu-item.danger {
+    color: #e05555;
+}
+
+.context-menu-item.danger:hover {
+    background-color: #3a2222;
+}
+
+/* ─── Rename input ───────────────────────────────────── */
+.chat-rename-input {
+    background-color: #2A2A2A;
+    border: 1px solid #3A3A3A;
+    border-radius: 6px;
+    color: #F4F4F4;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 4px 8px;
+    width: 100%;
+    outline: none;
+}
+
+.chat-item-pinned .chat-item-title::before {
+    content: '📌 ';
+    font-size: 11px;
 }
