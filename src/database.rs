@@ -256,6 +256,8 @@ pub mod messages {
             .await?;
 
         Ok(())
+
+        Ok(())
     }
 }
 
