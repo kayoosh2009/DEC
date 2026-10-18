@@ -28,6 +28,11 @@ function initChat(user) {
         }
     });
 
+    const name = user.displayName ? user.displayName.split(' ')[0] : null;
+    if (name) {
+        document.getElementById('welcomeText').textContent = `What are we doing today, ${name}?`;
+    }
+
     newChat();
     loadChatList();
 }
@@ -38,8 +43,6 @@ function toggleMenu() {
     menuOpen = !menuOpen;
     document.getElementById('menuIcon').classList.toggle('open', menuOpen);
     document.getElementById('sideMenu').classList.toggle('open', menuOpen);
-    document.getElementById('main').classList.toggle('shifted', menuOpen);
-    document.querySelector('.chat-input-bar').classList.toggle('shifted', menuOpen);
 }
 
 function toggleLogoutPopup() {
