@@ -26,21 +26,16 @@
             gap: 12px;
         }
 
-        .back-btn {
-            background: none;
-            border: none;
-            color: #666;
-            font-family: 'Kotyhoroshko', sans-serif;
-            font-size: 13px;
+        .back-icon {
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: color 0.2s, background-color 0.2s;
+            opacity: 0.6;
+            transition: opacity 0.2s;
         }
 
-        .back-btn:hover {
-            color: #F4F4F4;
-            background-color: #2A2A2A;
+        .back-icon:hover {
+            opacity: 1;
         }
 
         .navbar-title {
@@ -244,7 +239,7 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-left">
-            <button class="back-btn" onclick="window.location.href='/index.html'">← Back</button>
+            <img src="img/back.png" alt="back" class="back-icon" onclick="window.location.href='/index.html'">
             <span class="navbar-title">DASHBOARD</span>
         </div>
     </nav>
