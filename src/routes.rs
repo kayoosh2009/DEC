@@ -389,7 +389,8 @@ mod chat {
                     &config.firebase_project_id,
                     &body.id_token,
                     tokens,
-                ).await;
+                )
+                .await;
 
                 HttpResponse::Ok().json(SendResponse {
                     message: text,

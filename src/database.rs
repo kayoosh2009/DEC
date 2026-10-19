@@ -249,7 +249,7 @@ pub mod messages {
             .and_then(|v| v.parse::<u64>().ok())
             .unwrap_or(0);
 
-        client
+        let patch_resp = client
             .patch(&url)
             .bearer_auth(id_token)
             .json(&json!({
@@ -261,8 +261,15 @@ pub mod messages {
             .send()
             .await?;
 
+        println!("[platform_stats] update status: {}", patch_resp.status());
+        if !patch_resp.status().is_success() {
+            let err_body = patch_resp.text().await.unwrap_or_default();
+            println!("[platform_stats] error details: {}", err_body);
+        }
+
         Ok(())
     }
+}
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 
