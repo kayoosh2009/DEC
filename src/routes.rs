@@ -40,6 +40,7 @@ mod chat {
     use crate::ai::{self, Message};
     use crate::config::AppConfig;
     use crate::database::{memory, messages};
+    use crate::telegram;
     use actix_web::{web, HttpResponse};
     use serde::{Deserialize, Serialize};
 
@@ -146,7 +147,11 @@ mod chat {
 
         match result {
             Ok(r) => {
-                println!("[save_chat] status: {}", r.status());
+                let log_text = format!(
+                    "💬 <b>Новый чат</b>\n<b>ID:</b> <code>{}</code>\n<b>Название:</b> {}\n<b>Пользователь (UID):</b> <code>{}</code>",
+                    body.chat_id, body.title, body.uid
+                );
+                telegram::send_log(&client, &config.telegram_bot_token, &config.telegram_channel, &log_text).await;
                 HttpResponse::Ok().body("ok")
             }
             Err(e) => {
@@ -344,6 +349,7 @@ mod chat {
                 let tokens = ((body.message.len() + text.len()) / 4) as u64;
 
                 // 7. Сохраняем сообщение пользователя
+                let msg_id = uuid::Uuid::new_v4().to_string();
                 let user_msg = Message {
                     role: "user".to_string(),
                     content: body.message.clone(),
@@ -354,7 +360,7 @@ mod chat {
                     &body.id_token,
                     &body.uid,
                     &body.chat_id,
-                    &uuid::Uuid::new_v4().to_string(),
+                    &msg_id,
                     &user_msg,
                     &body.timestamp,
                     false,
@@ -390,6 +396,13 @@ mod chat {
                     tokens,
                 )
                 .await;
+
+                // 10. Логируем в Telegram (активный пользователь, id сообщения и вес)
+                let log_text = format!(
+                    "✉️ <b>Сообщение обработано</b>\n<b>ID:</b> <code>{}</code>\n<b>Вес:</b> {} токенов\n<b>UID:</b> <code>{}</code>",
+                    msg_id, tokens, body.uid
+                );
+                telegram::send_log(&client, &config.telegram_bot_token, &config.telegram_channel, &log_text).await;
 
                 HttpResponse::Ok().json(SendResponse {
                     message: text,
