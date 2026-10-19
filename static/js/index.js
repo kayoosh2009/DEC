@@ -367,6 +367,9 @@ async function sendMessage() {
         }
     }
 
+    // Показываем индикатор печати
+    showTypingIndicator();
+
     const resp = await fetch('/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -379,6 +382,8 @@ async function sendMessage() {
         })
     });
 
+    removeTypingIndicator();
+
     if (!resp.ok) {
         appendMessage('ai', 'Error: ' + resp.status);
         return;
@@ -387,4 +392,24 @@ async function sendMessage() {
     const data = await resp.json();
     appendMessage('ai', data.message, data.timestamp);
     await loadChatList();
+}
+
+function showTypingIndicator() {
+    const container = document.getElementById('chatMessages');
+    const wrap = document.createElement('div');
+    wrap.classList.add('message', 'message-ai');
+    wrap.id = 'typingIndicator';
+
+    const bubble = document.createElement('div');
+    bubble.classList.add('message-bubble', 'typing-bubble');
+    bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+
+    wrap.appendChild(bubble);
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeTypingIndicator() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
 }
