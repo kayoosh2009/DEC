@@ -11,6 +11,8 @@ pub struct AppConfig {
     pub firebase_api_key: String,
     pub firebase_auth_domain: String,
     pub firebase_app_id: String,
+    pub telegram_bot_token: String,
+    pub telegram_channel: String,
 }
 
 impl AppConfig {
@@ -25,6 +27,8 @@ impl AppConfig {
             firebase_api_key: env::var("FIREBASE_API_KEY")?,
             firebase_auth_domain: env::var("FIREBASE_AUTH_DOMAIN")?,
             firebase_app_id: env::var("FIREBASE_APP_ID")?,
+            telegram_bot_token: env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
+            telegram_channel: env::var("TELEGRAM_CHANNEL").unwrap_or_else(|_| "@openlogs_kayoosh".to_string()),
         })
     }
 }
