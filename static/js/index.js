@@ -335,14 +335,14 @@ async function sendMessage() {
     const idToken = await currentUser.getIdToken();
     const timestamp = new Date().toISOString();
 
-    // Если первое сообщение — генерируем заголовок
+// Если первое сообщение — генерируем заголовок
     if (isFirstMessage) {
         isFirstMessage = false;
         const titleResp = await fetch('/chat/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: currentChatId,
+                chat_id: crypto.randomUUID(),
                 message: `Give this chat a short title (max 5 words) based on this first message. Reply with the title only, no punctuation: "${text}"`,
                 timestamp,
                 id_token: idToken,

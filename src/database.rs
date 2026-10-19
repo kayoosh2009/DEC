@@ -43,7 +43,10 @@ pub mod auth {
         email: &str,
         password: &str,
     ) -> anyhow::Result<AuthResponse> {
-        let url = format!("{}/accounts:signInWithPassword?key={}", FIREBASE_AUTH_BASE, api_key);
+        let url = format!(
+            "{}/accounts:signInWithPassword?key={}",
+            FIREBASE_AUTH_BASE, api_key
+        );
 
         let resp = client
             .post(&url)
@@ -152,8 +155,8 @@ pub mod messages {
             .unwrap_or(&vec![])
             .iter()
             .map(|doc| {
-                let role      = super::get_str(doc, "role");
-                let content   = super::get_str(doc, "content");
+                let role = super::get_str(doc, "role");
+                let content = super::get_str(doc, "content");
                 let timestamp = super::get_str(doc, "timestamp");
                 (timestamp, Message { role, content })
             })
@@ -203,8 +206,8 @@ pub mod messages {
                     .unwrap_or(false)
             })
             .map(|doc| {
-                let role      = super::get_str(doc, "role");
-                let content   = super::get_str(doc, "content");
+                let role = super::get_str(doc, "role");
+                let content = super::get_str(doc, "content");
                 let timestamp = super::get_str(doc, "timestamp");
                 (timestamp, Message { role, content })
             })
@@ -227,12 +230,7 @@ pub mod messages {
         );
 
         // First read current values
-        let resp: Value = client
-            .get(&url)
-            .send()
-            .await?
-            .json()
-            .await?;
+        let resp: Value = client.get(&url).send().await?.json().await?;
 
         let current_tokens = resp["fields"]["tokens_used"]["integerValue"]
             .as_str()
@@ -319,7 +317,7 @@ pub mod memory {
             .unwrap_or(&vec![])
             .iter()
             .map(|doc| MemoryPoint {
-                summary:   super::get_str(doc, "summary"),
+                summary: super::get_str(doc, "summary"),
                 timestamp: super::get_str(doc, "timestamp"),
             })
             .collect();

@@ -5,8 +5,8 @@ mod config;
 mod database;
 mod routes;
 
-use actix_web::{web, App, HttpServer};
 use actix_files::Files;
+use actix_web::{web, App, HttpServer};
 use config::AppConfig;
 
 #[actix_web::main]

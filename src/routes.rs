@@ -4,22 +4,22 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     cfg
         // Auth
         .route("/auth/register", web::post().to(auth::register))
-        .route("/auth/login",    web::post().to(auth::login))
+        .route("/auth/login", web::post().to(auth::login))
         // Chat
-        .route("/chat/send",     web::post().to(chat::send_message))
-        .route("/chat/star",     web::post().to(chat::star_message))
-        .route("/chat/list",     web::get().to(chat::list_chats))
-        .route("/chat/save",     web::post().to(chat::save_chat))
-        .route("/chat/delete",   web::post().to(chat::delete_chat))
+        .route("/chat/send", web::post().to(chat::send_message))
+        .route("/chat/star", web::post().to(chat::star_message))
+        .route("/chat/list", web::get().to(chat::list_chats))
+        .route("/chat/save", web::post().to(chat::save_chat))
+        .route("/chat/delete", web::post().to(chat::delete_chat))
         .route("/chat/messages", web::get().to(chat::get_messages))
         // Config
-        .route("/api/config",    web::get().to(config_handler::get_config))
+        .route("/api/config", web::get().to(config_handler::get_config))
         // Dashboard
         .route("/dashboard/stats", web::get().to(dashboard::platform_stats))
-        .route("/dashboard/user",  web::get().to(dashboard::user_stats))
+        .route("/dashboard/user", web::get().to(dashboard::user_stats))
         // Memory
-        .route("/memory/list",   web::get().to(memory::list))
-        .route("/memory/add",    web::post().to(memory::add));
+        .route("/memory/list", web::get().to(memory::list))
+        .route("/memory/add", web::post().to(memory::add));
 }
 
 // --- Auth handlers ---
@@ -37,11 +37,11 @@ mod auth {
 
 // --- Chat handlers ---
 mod chat {
+    use crate::ai::{self, Message};
+    use crate::config::AppConfig;
+    use crate::database::{memory, messages};
     use actix_web::{web, HttpResponse};
     use serde::{Deserialize, Serialize};
-    use crate::config::AppConfig;
-    use crate::ai::{self, Message};
-    use crate::database::{messages, memory};
 
     #[derive(Deserialize)]
     pub struct SendRequest {
@@ -73,20 +73,25 @@ mod chat {
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
-        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
-        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
-        let chat_id = match query.get("chat_id") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing chat_id") };
+        let uid = match query.get("uid") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing uid"),
+        };
+        let id_token = match query.get("id_token") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing id_token"),
+        };
+        let chat_id = match query.get("chat_id") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing chat_id"),
+        };
 
         let url = format!(
             "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
             config.firebase_project_id, uid, chat_id
         );
 
-        let resp = client
-            .get(&url)
-            .bearer_auth(id_token)
-            .send()
-            .await;
+        let resp = client.get(&url).bearer_auth(id_token).send().await;
 
         match resp {
             Ok(r) => {
@@ -104,7 +109,10 @@ mod chat {
                     .collect();
 
                 msgs.sort_by(|a, b| {
-                    a["timestamp"].as_str().unwrap_or("").cmp(b["timestamp"].as_str().unwrap_or(""))
+                    a["timestamp"]
+                        .as_str()
+                        .unwrap_or("")
+                        .cmp(b["timestamp"].as_str().unwrap_or(""))
                 });
 
                 HttpResponse::Ok().json(msgs)
@@ -140,11 +148,11 @@ mod chat {
             Ok(r) => {
                 println!("[save_chat] status: {}", r.status());
                 HttpResponse::Ok().body("ok")
-            },
+            }
             Err(e) => {
                 println!("[save_chat] error: {}", e);
                 HttpResponse::InternalServerError().body(e.to_string())
-            },
+            }
         }
     }
 
@@ -165,11 +173,7 @@ mod chat {
             config.firebase_project_id, body.uid, body.chat_id
         );
 
-        let result = client
-            .delete(&url)
-            .bearer_auth(&body.id_token)
-            .send()
-            .await;
+        let result = client.delete(&url).bearer_auth(&body.id_token).send().await;
 
         match result {
             Ok(_) => HttpResponse::Ok().body("ok"),
@@ -182,19 +186,21 @@ mod chat {
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
-        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
-        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+        let uid = match query.get("uid") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing uid"),
+        };
+        let id_token = match query.get("id_token") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing id_token"),
+        };
 
         let url = format!(
             "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats",
             config.firebase_project_id, uid
         );
 
-        let resp = client
-            .get(&url)
-            .bearer_auth(id_token)
-            .send()
-            .await;
+        let resp = client.get(&url).bearer_auth(id_token).send().await;
 
         match resp {
             Ok(r) => {
@@ -248,7 +254,8 @@ mod chat {
             &body.timestamp,
             true,
             0,
-        ).await;
+        )
+        .await;
 
         match result {
             Ok(_) => HttpResponse::Ok().body("ok"),
@@ -261,6 +268,30 @@ mod chat {
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
+        // Если это запрос на заголовок — генерируем ответ без сохранения в историю и БД
+        if body.message.starts_with("Give this chat a short title") {
+            let ai_response = ai::generate_response(
+                &client,
+                &config.ollama_url,
+                &config.ollama_api_key,
+                &config.ollama_model,
+                &body.message,
+                &body.timestamp,
+                vec![],
+                vec![],
+                vec![],
+            )
+            .await;
+
+            return match ai_response {
+                Ok(text) => HttpResponse::Ok().json(SendResponse {
+                    message: text,
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                }),
+                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            };
+        }
+
         // 1. Грузим последние 20 сообщений
         let recent = messages::load_recent(
             &client,
@@ -269,7 +300,9 @@ mod chat {
             &body.uid,
             &body.chat_id,
             20,
-        ).await.unwrap_or_default();
+        )
+        .await
+        .unwrap_or_default();
 
         // 2. Грузим избранные сообщения
         let starred = messages::load_starred(
@@ -278,7 +311,9 @@ mod chat {
             &body.id_token,
             &body.uid,
             &body.chat_id,
-        ).await.unwrap_or_default();
+        )
+        .await
+        .unwrap_or_default();
 
         // 3. Грузим memory points
         let memory_points = memory::load_all(
@@ -286,7 +321,9 @@ mod chat {
             &config.firebase_project_id,
             &body.id_token,
             &body.uid,
-        ).await.unwrap_or_default();
+        )
+        .await
+        .unwrap_or_default();
 
         // 4. Генерируем ответ
         let ai_response = ai::generate_response(
@@ -299,7 +336,8 @@ mod chat {
             recent,
             starred,
             memory_points,
-        ).await;
+        )
+        .await;
 
         match ai_response {
             Ok(text) => {
@@ -307,7 +345,10 @@ mod chat {
                 let tokens = ((body.message.len() + text.len()) / 4) as u64;
 
                 // 7. Сохраняем сообщение пользователя
-                let user_msg = Message { role: "user".to_string(), content: body.message.clone() };
+                let user_msg = Message {
+                    role: "user".to_string(),
+                    content: body.message.clone(),
+                };
                 let _ = messages::save(
                     &client,
                     &config.firebase_project_id,
@@ -319,10 +360,14 @@ mod chat {
                     &body.timestamp,
                     false,
                     tokens / 2,
-                ).await;
+                )
+                .await;
 
                 // 8. Сохраняем ответ ИИ
-                let ai_msg = Message { role: "assistant".to_string(), content: text.clone() };
+                let ai_msg = Message {
+                    role: "assistant".to_string(),
+                    content: text.clone(),
+                };
                 let ai_timestamp = chrono::Utc::now().to_rfc3339();
                 let _ = messages::save(
                     &client,
@@ -335,14 +380,16 @@ mod chat {
                     &ai_timestamp,
                     false,
                     tokens / 2,
-                ).await;
+                )
+                .await;
 
                 // 9. Обновляем глобальную статистику
                 let _ = messages::increment_platform_stats(
                     &client,
                     &config.firebase_project_id,
                     tokens,
-                ).await;
+                )
+                .await;
 
                 HttpResponse::Ok().json(SendResponse {
                     message: text,
@@ -369,9 +416,9 @@ mod memory {
 
 // --- Dashboard handlers ---
 mod dashboard {
+    use crate::config::AppConfig;
     use actix_web::{web, HttpResponse};
     use std::collections::HashMap;
-    use crate::config::AppConfig;
 
     pub async fn platform_stats(
         config: web::Data<AppConfig>,
@@ -388,9 +435,13 @@ mod dashboard {
             Ok(r) => {
                 let data: serde_json::Value = r.json().await.unwrap_or_default();
                 let tokens = data["fields"]["tokens_used"]["integerValue"]
-                    .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+                    .as_str()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
                 let messages = data["fields"]["messages_count"]["integerValue"]
-                    .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+                    .as_str()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
 
                 HttpResponse::Ok().json(serde_json::json!({
                     "tokens_used":    tokens,
@@ -406,8 +457,14 @@ mod dashboard {
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
-        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
-        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+        let uid = match query.get("uid") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing uid"),
+        };
+        let id_token = match query.get("id_token") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing id_token"),
+        };
 
         // Загружаем все чаты пользователя
         let chats_url = format!(
@@ -418,9 +475,11 @@ mod dashboard {
         let chats_resp: serde_json::Value = client
             .get(&chats_url)
             .bearer_auth(id_token)
-            .send().await
+            .send()
+            .await
             .unwrap()
-            .json().await
+            .json()
+            .await
             .unwrap_or_default();
 
         let now = chrono::Utc::now();
@@ -442,16 +501,22 @@ mod dashboard {
                 let msgs_resp: serde_json::Value = client
                     .get(&msgs_url)
                     .bearer_auth(id_token)
-                    .send().await
+                    .send()
+                    .await
                     .unwrap()
-                    .json().await
+                    .json()
+                    .await
                     .unwrap_or_default();
 
                 if let Some(msgs) = msgs_resp["documents"].as_array() {
                     for msg in msgs {
-                        let ts = msg["fields"]["timestamp"]["stringValue"].as_str().unwrap_or("");
+                        let ts = msg["fields"]["timestamp"]["stringValue"]
+                            .as_str()
+                            .unwrap_or("");
                         let tokens = msg["fields"]["tokens"]["integerValue"]
-                            .as_str().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+                            .as_str()
+                            .and_then(|v| v.parse::<u64>().ok())
+                            .unwrap_or(0);
 
                         if ts.starts_with(&month_prefix) {
                             tokens_this_month += tokens;
@@ -472,9 +537,9 @@ mod dashboard {
 
 // --- Config handler ---
 mod config_handler {
+    use crate::config::AppConfig;
     use actix_web::{web, HttpResponse};
     use serde_json::json;
-    use crate::config::AppConfig;
 
     pub async fn get_config(config: web::Data<AppConfig>) -> HttpResponse {
         HttpResponse::Ok().json(json!({

@@ -43,7 +43,11 @@ fn load_instructions(user_message: &str) -> String {
     if let Ok(entries) = fs::read_dir("Instruction") {
         for entry in entries.flatten() {
             let path = entry.path();
-            let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let filename = path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
 
             if filename == "main.md" || !filename.ends_with(".md") {
                 continue;
