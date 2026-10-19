@@ -387,9 +387,9 @@ mod chat {
                 let _ = messages::increment_platform_stats(
                     &client,
                     &config.firebase_project_id,
+                    &body.id_token,
                     tokens,
-                )
-                .await;
+                ).await;
 
                 HttpResponse::Ok().json(SendResponse {
                     message: text,
@@ -421,15 +421,21 @@ mod dashboard {
     use std::collections::HashMap;
 
     pub async fn platform_stats(
+        query: web::Query<HashMap<String, String>>,
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
+        let id_token = match query.get("id_token") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing id_token"),
+        };
+
         let url = format!(
             "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/platform/stats",
             config.firebase_project_id
         );
 
-        let resp = client.get(&url).send().await;
+        let resp = client.get(&url).bearer_auth(id_token).send().await;
 
         match resp {
             Ok(r) => {

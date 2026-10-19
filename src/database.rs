@@ -222,6 +222,7 @@ pub mod messages {
     pub async fn increment_platform_stats(
         client: &reqwest::Client,
         project_id: &str,
+        id_token: &str,
         tokens: u64,
     ) -> anyhow::Result<()> {
         let url = format!(
@@ -230,7 +231,13 @@ pub mod messages {
         );
 
         // First read current values
-        let resp: Value = client.get(&url).send().await?.json().await?;
+        let resp: Value = client
+            .get(&url)
+            .bearer_auth(id_token)
+            .send()
+            .await?
+            .json()
+            .await?;
 
         let current_tokens = resp["fields"]["tokens_used"]["integerValue"]
             .as_str()
@@ -244,6 +251,7 @@ pub mod messages {
 
         client
             .patch(&url)
+            .bearer_auth(id_token)
             .json(&json!({
                 "fields": {
                     "tokens_used":    { "integerValue": (current_tokens + tokens).to_string() },
@@ -255,7 +263,6 @@ pub mod messages {
 
         Ok(())
     }
-}
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 

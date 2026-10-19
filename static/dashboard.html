@@ -309,15 +309,15 @@
             const idToken = await user.getIdToken();
 
             // Platform stats
-            await loadPlatformStats();
+            await loadPlatformStats(idToken);
 
             // User stats
             await loadUserStats(user.uid, idToken);
         }
 
-        async function loadPlatformStats() {
+        async function loadPlatformStats(idToken) {
             try {
-                const resp = await fetch('/dashboard/stats');
+                const resp = await fetch(`/dashboard/stats?id_token=${encodeURIComponent(idToken)}`);
                 if (!resp.ok) return;
                 const data = await resp.json();
 
