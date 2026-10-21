@@ -253,6 +253,11 @@ async function openChat(chatId) {
     for (const msg of msgs) {
         appendMessage(msg.role === 'assistant' ? 'ai' : msg.role, msg.content, msg.timestamp);
     }
+
+    const mainContainer = document.getElementById('main');
+    if (mainContainer) {
+        mainContainer.scrollTop = mainContainer.scrollHeight;
+    }
 }
 
 function autoResize(el) {
@@ -261,9 +266,13 @@ function autoResize(el) {
 }
 
 function handleKey(e) {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+        // На мобильных устройствах Enter всегда делает перенос строки
+        if (!isMobile) {
+            e.preventDefault();
+            sendMessage();
+        }
     }
 }
 
@@ -322,8 +331,11 @@ async function toggleStar(btn, msgId, role, content, timestamp) {
 
 async function sendMessage() {
     const input = document.getElementById('chatInput');
+    const sendBtn = document.querySelector('.chat-send-btn');
     const text = input.value.trim();
-    if (!text || !currentUser) return;
+    if (!text || !currentUser || (sendBtn && sendBtn.disabled)) return;
+
+    if (sendBtn) sendBtn.disabled = true;
 
     document.getElementById('chatWelcome').classList.add('hidden');
 
@@ -383,6 +395,8 @@ async function sendMessage() {
     });
 
     removeTypingIndicator();
+
+    if (sendBtn) sendBtn.disabled = false;
 
     if (!resp.ok) {
         appendMessage('ai', 'Error: ' + resp.status);
