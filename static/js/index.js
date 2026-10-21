@@ -172,9 +172,12 @@ async function pinChat() {
 
 function startRename() {
     if (!contextMenuChat) return;
+    const chatToRename = contextMenuChat;
+    const chatId = chatToRename.chat_id;
+    const pinned = chatToRename.pinned;
     closeContextMenu();
 
-    const item = document.querySelector(`[data-chat-id="${contextMenuChat.chat_id}"]`);
+    const item = document.querySelector(`[data-chat-id="${chatId}"]`);
     if (!item) return;
 
     const titleEl = item.querySelector('.chat-item-title');
@@ -183,19 +186,33 @@ function startRename() {
     const input = document.createElement('input');
     input.classList.add('chat-rename-input');
     input.value = currentTitle;
+    input.onclick = (e) => e.stopPropagation();
 
     titleEl.replaceWith(input);
     input.focus();
     input.select();
 
-    input.onblur = () => finishRename(input, contextMenuChat?.chat_id || item.dataset.chatId);
+    let saved = false;
+    const save = async () => {
+        if (saved) return;
+        saved = true;
+        await finishRename(input, chatId, pinned);
+    };
+
+    input.onblur = save;
     input.onkeydown = (e) => {
-        if (e.key === 'Enter') input.blur();
-        if (e.key === 'Escape') loadChatList();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            save();
+        }
+        if (e.key === 'Escape') {
+            saved = true;
+            loadChatList();
+        }
     };
 }
 
-async function finishRename(input, chatId) {
+async function finishRename(input, chatId, pinned = false) {
     const newTitle = input.value.trim();
     if (!newTitle) { await loadChatList(); return; }
 
@@ -207,6 +224,7 @@ async function finishRename(input, chatId) {
             chat_id: chatId,
             title: newTitle,
             timestamp: new Date().toISOString(),
+            pinned: pinned,
             id_token: idToken,
             uid: currentUser.uid,
         })
@@ -220,6 +238,13 @@ async function deleteChat() {
     const chat = contextMenuChat;
     closeContextMenu();
 
+    // Мгновенно убираем чат из бокового списка на экране
+    const item = document.querySelector(`[data-chat-id="${chat.chat_id}"]`);
+    if (item) item.remove();
+
+    // Если был открыт удаляемый чат — мгновенно сбрасываем окно переписки
+    if (currentChatId === chat.chat_id) newChat();
+
     const idToken = await currentUser.getIdToken();
 
     await fetch('/chat/delete', {
@@ -232,7 +257,6 @@ async function deleteChat() {
         })
     });
 
-    if (currentChatId === chat.chat_id) newChat();
     await loadChatList();
 }
 
