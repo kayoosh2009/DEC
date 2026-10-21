@@ -239,7 +239,8 @@
         <div class="page-header">
             <h1 class="page-heading">Память и знания DEC</h1>
             <div class="header-actions">
-                <button class="btn" onclick="exportMemoryJson()">Скачать JSON</button>
+                <button class="btn" onclick="exportAllChats()">Скачать все чаты (JSON)</button>
+                <button class="btn" onclick="exportMemoryJson()">Скачать память (JSON)</button>
                 <button class="btn btn-danger" onclick="clearMemory()">Очистить память</button>
             </div>
         </div>
@@ -329,6 +330,33 @@
                 card.appendChild(header);
                 card.appendChild(text);
                 list.appendChild(card);
+            }
+        }
+
+        async function exportAllChats() {
+            try {
+                const idToken = await currentUser.getIdToken();
+                const resp = await fetch(`/chat/export?uid=${currentUser.uid}&id_token=${encodeURIComponent(idToken)}`);
+                if (!resp.ok) {
+                    alert('Не удалось скачать чаты');
+                    return;
+                }
+                const dataset = await resp.json();
+                if (!dataset || dataset.length === 0) {
+                    alert('У вас пока нет сохранённых чатов');
+                    return;
+                }
+
+                const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dec_training_dataset_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка при выгрузке чатов');
             }
         }
 

@@ -12,6 +12,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/chat/save", web::post().to(chat::save_chat))
         .route("/chat/delete", web::post().to(chat::delete_chat))
         .route("/chat/messages", web::get().to(chat::get_messages))
+        .route("/chat/export", web::get().to(chat::export_chats))
         // Config
         .route("/api/config", web::get().to(config_handler::get_config))
         // Dashboard
@@ -245,6 +246,68 @@ mod chat {
         }
     }
 
+    pub async fn export_chats(
+        query: web::Query<std::collections::HashMap<String, String>>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let uid = match query.get("uid") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing uid") };
+        let id_token = match query.get("id_token") { Some(v) => v, None => return HttpResponse::BadRequest().body("missing id_token") };
+
+        // 1. Получаем все чаты
+        let chats_url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats",
+            config.firebase_project_id, uid
+        );
+
+        let chats_resp = client.get(&chats_url).bearer_auth(id_token).send().await;
+        let mut export_dataset = Vec::new();
+
+        if let Ok(r) = chats_resp {
+            let data: serde_json::Value = r.json().await.unwrap_or_default();
+            if let Some(docs) = data["documents"].as_array() {
+                for doc in docs {
+                    let name = doc["name"].as_str().unwrap_or("");
+                    let chat_id = name.split('/').last().unwrap_or("");
+                    let title = doc["fields"]["title"]["stringValue"].as_str().unwrap_or("Untitled");
+
+                    // 2. Для каждого чата получаем сообщения
+                    let msgs_url = format!(
+                        "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}/messages",
+                        config.firebase_project_id, uid, chat_id
+                    );
+
+                    if let Ok(mr) = client.get(&msgs_url).bearer_auth(id_token).send().await {
+                        let mdata: serde_json::Value = mr.json().await.unwrap_or_default();
+                        if let Some(mdocs) = mdata["documents"].as_array() {
+                            let mut messages_list = Vec::new();
+                            for mdoc in mdocs {
+                                let role = mdoc["fields"]["role"]["stringValue"].as_str().unwrap_or("");
+                                let content = mdoc["fields"]["content"]["stringValue"].as_str().unwrap_or("");
+                                let ts = mdoc["fields"]["timestamp"]["stringValue"].as_str().unwrap_or("");
+                                messages_list.push((ts, serde_json::json!({
+                                    "role": role,
+                                    "content": content
+                                })));
+                            }
+                            messages_list.sort_by(|a, b| a.0.cmp(&b.0));
+                            let clean_messages: Vec<serde_json::Value> = messages_list.into_iter().map(|(_, m)| m).collect();
+
+                            if !clean_messages.is_empty() {
+                                export_dataset.push(serde_json::json!({
+                                    "title": title,
+                                    "dialog": clean_messages
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HttpResponse::Ok().json(export_dataset)
+    }
+
     #[derive(Deserialize)]
     pub struct StarRequest {
         pub chat_id: String,
@@ -416,6 +479,52 @@ mod chat {
                     msg_id, tokens, body.uid
                 );
                 telegram::send_log(&client, &config.telegram_bot_token, &config.telegram_channel, &log_text).await;
+
+                // 11. Фоновое извлечение фактов о пользователе в память
+                let bg_client = client.get_ref().clone();
+                let bg_config = config.get_ref().clone();
+                let bg_uid = body.uid.clone();
+                let bg_id_token = body.id_token.clone();
+                let bg_user_msg = body.message.clone();
+
+                actix_web::rt::spawn(async move {
+                    let prompt = format!(
+                        "Проанализируй фразу пользователя: \"{}\". Содержит ли она личные факты о самом пользователе (его имя, увлечения, предпочтения, работа, привычки)? Если ДА, сформулируй один краткий факт от третьего лица (например: 'Пользователя зовут Андрей' или 'Пользователь любит пиццу'). Если личных фактов нет — ответь строго одним словом: НЕТ",
+                        bg_user_msg
+                    );
+
+                    let req = serde_json::json!({
+                        "model": bg_config.ollama_model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "stream": false
+                    });
+
+                    if let Ok(resp) = bg_client
+                        .post(format!("{}/api/chat", bg_config.ollama_url))
+                        .header("Authorization", format!("Bearer {}", bg_config.ollama_api_key))
+                        .header("Content-Type", "application/json")
+                        .json(&req)
+                        .send()
+                        .await
+                    {
+                        if let Ok(data) = resp.json::<serde_json::Value>().await {
+                            let fact = data["message"]["content"].as_str().unwrap_or("").trim().to_string();
+                            if !fact.is_empty() && !fact.to_uppercase().contains("НЕТ") && fact.len() < 120 {
+                                let point_id = uuid::Uuid::new_v4().to_string();
+                                let now = chrono::Utc::now().to_rfc3339();
+                                let _ = memory::save(
+                                    &bg_client,
+                                    &bg_config.firebase_project_id,
+                                    &bg_id_token,
+                                    &bg_uid,
+                                    &point_id,
+                                    &fact,
+                                    &now,
+                                ).await;
+                            }
+                        }
+                    }
+                });
 
                 HttpResponse::Ok().json(SendResponse {
                     message: text,
