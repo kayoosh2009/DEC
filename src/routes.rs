@@ -148,7 +148,7 @@ mod chat {
             .await;
 
         match result {
-            Ok(r) => {
+            Ok(_) => {
                 let log_text = format!(
                     "💬 <b>Новый чат</b>\n<b>ID:</b> <code>{}</code>\n<b>Название:</b> {}\n<b>Пользователь (UID):</b> <code>{}</code>",
                     body.chat_id, body.title, body.uid
@@ -177,6 +177,10 @@ mod chat {
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
         let keep = body.keep_for_training.unwrap_or(false);
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}",
+            config.firebase_project_id, body.uid, body.chat_id
+        );
 
         if keep {
             let log_msg = format!(
@@ -184,13 +188,24 @@ mod chat {
                 body.chat_id, body.uid
             );
             crate::telegram::send_log(&client, &config.telegram_bot_token, &config.telegram_channel, &log_msg).await;
-        }
 
-        // Удаляем метаданные чата из списка пользователя
-        let url = format!(
-            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}",
-            config.firebase_project_id, body.uid, body.chat_id
-        );
+            // Сохраняем чат и сообщения в базе, помечая его скрытым из списка
+            let patch_res = client
+                .patch(&format!("{}?updateMask.fieldPaths=archived", url))
+                .bearer_auth(&body.id_token)
+                .json(&serde_json::json!({
+                    "fields": {
+                        "archived": { "booleanValue": true }
+                    }
+                }))
+                .send()
+                .await;
+
+            return match patch_res {
+                Ok(_) => HttpResponse::Ok().body("ok"),
+                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            };
+        }
 
         let result = client.delete(&url).bearer_auth(&body.id_token).send().await;
 
@@ -228,6 +243,10 @@ mod chat {
                     .as_array()
                     .unwrap_or(&vec![])
                     .iter()
+                    .filter(|doc| {
+                        // Не показываем архивированные для обучения чаты в боковом меню
+                        !doc["fields"]["archived"]["booleanValue"].as_bool().unwrap_or(false)
+                    })
                     .map(|doc| {
                         let name = doc["name"].as_str().unwrap_or("");
                         let chat_id = name.split('/').last().unwrap_or("");
