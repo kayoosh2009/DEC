@@ -246,6 +246,8 @@ async function deleteChat() {
     if (currentChatId === chat.chat_id) newChat();
 
     const idToken = await currentUser.getIdToken();
+    // Берём значение тумблера: false по умолчанию, true только если пользователь сам включил его в Memory
+    const keepForTraining = localStorage.getItem('dec_training_enabled') === 'true';
 
     await fetch('/chat/delete', {
         method: 'POST',
@@ -254,6 +256,7 @@ async function deleteChat() {
             chat_id: chat.chat_id,
             id_token: idToken,
             uid: currentUser.uid,
+            keep_for_training: keepForTraining,
         })
     });
 

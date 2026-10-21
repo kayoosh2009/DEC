@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEC — Memory</title>
+    <link rel="icon" type="image/png" href="img/icon.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ─── Navbar ─────────────────────────────────────────── */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background-color: #1E1E1E;
+            border-bottom: 1px solid #2A2A2A;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-icon {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .back-icon:hover {
+            opacity: 1;
+        }
+
+        .navbar-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            letter-spacing: 1px;
+        }
+
+        /* ─── Page ───────────────────────────────────────────── */
+        .page {
+            margin-top: 56px;
+            padding: 40px 24px 60px;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-heading {
+            font-size: 22px;
+            font-weight: 700;
+            color: #E0E0E0;
+            letter-spacing: 0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background-color: #242424;
+            color: #F4F4F4;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background-color: #2F2F2F;
+            border-color: #444;
+        }
+
+        .btn-danger {
+            color: #d9534f;
+            border-color: #4a2424;
+        }
+
+        .btn-danger:hover {
+            background-color: #3b1e1e;
+            border-color: #733232;
+        }
+
+        /* ─── Settings Card (Toggle) ─────────────────────────── */
+        .card {
+            background-color: #1A1A1A;
+            border: 1px solid #2A2A2A;
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .toggle-info h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #E0E0E0;
+            margin-bottom: 4px;
+        }
+
+        .toggle-info p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2A2A2A;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #888;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #4A5B46;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+            background-color: #A0E296;
+        }
+
+        /* ─── Memory List ────────────────────────────────────── */
+        .memory-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .memory-item {
+            background-color: #1A1A1A;
+            border: 1px solid #262626;
+            border-radius: 10px;
+            padding: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .memory-item:hover {
+            border-color: #333;
+        }
+
+        .memory-header {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .memory-text {
+            font-size: 14px;
+            color: #CCC;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #555;
+            padding: 48px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <img src="img/back.png" alt="back" class="back-icon" onclick="window.location.href='/index.html'">
+            <span class="navbar-title">MEMORY</span>
+        </div>
+    </nav>
+
+    <div class="page">
+        <div class="page-header">
+            <h1 class="page-heading">Память и знания DEC</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="exportMemoryJson()">Скачать JSON</button>
+                <button class="btn btn-danger" onclick="clearMemory()">Очистить память</button>
+            </div>
+        </div>
+
+        <!-- Обучение ИИ рычаг -->
+        <div class="card">
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <h3>Использовать чаты для обучения ИИ</h3>
+                    <p>Если включено, удаляемые вами чаты не будут стираться полностью, а останутся анонимно в базе для дообучения модели DEC.</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="trainingToggle" onchange="toggleTraining(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Список воспоминаний -->
+        <div class="memory-list" id="memoryList">
+            <div class="empty-state">Загрузка воспоминаний...</div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let currentUser = null;
+        let memoryData = [];
+
+        initFirebase().then(() => {
+            auth.onAuthStateChanged(async user => {
+                if (!user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                currentUser = user;
+
+                // Загружаем сохранённое состояние рычага обучения
+                const trainingEnabled = localStorage.getItem('dec_training_enabled') !== 'false';
+                document.getElementById('trainingToggle').checked = trainingEnabled;
+
+                await loadMemory();
+            });
+        });
+
+        function toggleTraining(enabled) {
+            localStorage.setItem('dec_training_enabled', enabled);
+        }
+
+        async function loadMemory() {
+            try {
+                const idToken = await currentUser.getIdToken();
+                const resp = await fetch(`/memory/list?uid=${currentUser.uid}&id_token=${encodeURIComponent(idToken)}`);
+                if (!resp.ok) return;
+
+                memoryData = await resp.json();
+                renderMemory();
+            } catch (e) {
+                console.error('Ошибка загрузки памяти:', e);
+            }
+        }
+
+        function renderMemory() {
+            const list = document.getElementById('memoryList');
+            list.innerHTML = '';
+
+            if (!memoryData || memoryData.length === 0) {
+                list.innerHTML = '<div class="empty-state">У DEC пока нет сохранённых фактов о вас ( ´ ▽ ` )</div>';
+                return;
+            }
+
+            for (const item of memoryData) {
+                const card = document.createElement('div');
+                card.classList.add('memory-item');
+
+                const header = document.createElement('div');
+                header.classList.add('memory-header');
+                header.textContent = new Date(item.timestamp).toLocaleString('ru-RU');
+
+                const text = document.createElement('div');
+                text.classList.add('memory-text');
+                text.textContent = item.summary;
+
+                card.appendChild(header);
+                card.appendChild(text);
+                list.appendChild(card);
+            }
+        }
+
+        function exportMemoryJson() {
+            if (!memoryData || memoryData.length === 0) {
+                alert('Память пуста, нечего скачивать!');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(memoryData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dec_memory_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function clearMemory() {
+            if (!confirm('Вы уверены, что хотите стереть все воспоминания DEC? Это действие необратимо.')) {
+                return;
+            }
+
+            try {
+                const idToken = await currentUser.getIdToken();
+                const resp = await fetch('/memory/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uid: currentUser.uid,
+                        id_token: idToken,
+                    })
+                });
+
+                if (resp.ok) {
+                    memoryData = [];
+                    renderMemory();
+                } else {
+                    alert('Ошибка при очистке памяти: ' + resp.status);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+
+</html>

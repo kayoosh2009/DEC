@@ -19,6 +19,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route("/dashboard/user", web::get().to(dashboard::user_stats))
         // Memory
         .route("/memory/list", web::get().to(memory::list))
+        .route("/memory/clear", web::post().to(memory::clear))
         .route("/memory/add", web::post().to(memory::add));
 }
 
@@ -166,6 +167,7 @@ mod chat {
         pub chat_id: String,
         pub id_token: String,
         pub uid: String,
+        pub keep_for_training: Option<bool>,
     }
 
     pub async fn delete_chat(
@@ -173,6 +175,17 @@ mod chat {
         config: web::Data<AppConfig>,
         client: web::Data<reqwest::Client>,
     ) -> HttpResponse {
+        let keep = body.keep_for_training.unwrap_or(false);
+
+        if keep {
+            let log_msg = format!(
+                "🧠 <b>Чат архивирован для обучения</b>\n<b>Chat ID:</b> <code>{}</code>\n<b>User UID:</b> <code>{}</code>",
+                body.chat_id, body.uid
+            );
+            crate::telegram::send_log(&client, &config.telegram_bot_token, &config.telegram_channel, &log_msg).await;
+        }
+
+        // Удаляем метаданные чата из списка пользователя
         let url = format!(
             "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/chats/{}",
             config.firebase_project_id, body.uid, body.chat_id
@@ -416,14 +429,65 @@ mod chat {
 
 // --- Memory handlers ---
 mod memory {
-    use actix_web::HttpResponse;
+    use actix_web::{web, HttpResponse};
+    use std::collections::HashMap;
+    use crate::config::AppConfig;
+    use crate::database::memory as db_memory;
 
-    pub async fn list() -> HttpResponse {
-        HttpResponse::Ok().body("TODO: memory list")
+    pub async fn list(
+        query: web::Query<HashMap<String, String>>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let uid = match query.get("uid") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing uid"),
+        };
+        let id_token = match query.get("id_token") {
+            Some(v) => v,
+            None => return HttpResponse::BadRequest().body("missing id_token"),
+        };
+
+        match db_memory::load_all(&client, &config.firebase_project_id, id_token, uid).await {
+            Ok(points) => HttpResponse::Ok().json(points),
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+        }
+    }
+
+    #[derive(serde::Deserialize)]
+    pub struct ClearRequest {
+        pub uid: String,
+        pub id_token: String,
+    }
+
+    pub async fn clear(
+        body: web::Json<ClearRequest>,
+        config: web::Data<AppConfig>,
+        client: web::Data<reqwest::Client>,
+    ) -> HttpResponse {
+        let url = format!(
+            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/users/{}/memory",
+            config.firebase_project_id, body.uid
+        );
+
+        let resp = client.get(&url).bearer_auth(&body.id_token).send().await;
+        if let Ok(r) = resp {
+            let data: serde_json::Value = r.json().await.unwrap_or_default();
+            if let Some(docs) = data["documents"].as_array() {
+                for doc in docs {
+                    if let Some(name) = doc["name"].as_str() {
+                        let del_url = format!("https://firestore.googleapis.com/v1/{}", name);
+                        let _ = client.delete(&del_url).bearer_auth(&body.id_token).send().await;
+                    }
+                }
+            }
+        }
+
+        HttpResponse::Ok().body("ok")
     }
 
     pub async fn add() -> HttpResponse {
-        HttpResponse::Ok().body("TODO: memory add")
+        HttpResponse::Ok().body("ok")
     }
 }
 
