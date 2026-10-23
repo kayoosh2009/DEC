@@ -306,7 +306,9 @@ function handleKey(e) {
 function appendMessage(role, text, timestamp = null) {
     const container = document.getElementById('chatMessages');
     const msgId = crypto.randomUUID();
-    const msgTimestamp = timestamp || new Date().toISOString();
+    const msgDate = timestamp ? new Date(timestamp) : new Date();
+    const msgTimestamp = msgDate.toISOString();
+    const timeStr = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const wrap = document.createElement('div');
     wrap.classList.add('message', role === 'user' ? 'message-user' : 'message-ai');
@@ -322,16 +324,39 @@ function appendMessage(role, text, timestamp = null) {
     const actions = document.createElement('div');
     actions.classList.add('message-actions');
 
+    const leftActions = document.createElement('div');
+    leftActions.classList.add('actions-left');
+
     const starBtn = document.createElement('button');
     starBtn.classList.add('star-btn');
     starBtn.textContent = '☆';
     starBtn.onclick = () => toggleStar(starBtn, msgId, role, text, msgTimestamp);
 
-    actions.appendChild(starBtn);
+    const copyBtn = document.createElement('button');
+    copyBtn.classList.add('action-icon-btn');
+    copyBtn.title = 'Копировать';
+    copyBtn.innerHTML = '<img src="img/copy.png" alt="copy">';
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(text);
+        copyBtn.style.opacity = '1';
+        setTimeout(() => copyBtn.style.opacity = '', 1000);
+    };
+
+    leftActions.appendChild(starBtn);
+    leftActions.appendChild(copyBtn);
+
+    const timeEl = document.createElement('span');
+    timeEl.classList.add('message-time');
+    timeEl.textContent = timeStr;
+
+    actions.appendChild(leftActions);
+    actions.appendChild(timeEl);
+
     wrap.appendChild(bubble);
     wrap.appendChild(actions);
     container.appendChild(wrap);
-    container.scrollTop = container.scrollHeight;
+
+    return wrap;
 }
 
 async function toggleStar(btn, msgId, role, content, timestamp) {
@@ -369,7 +394,9 @@ async function sendMessage() {
     input.value = '';
     input.style.height = 'auto';
 
-    appendMessage('user', text);
+    const userMsgWrap = appendMessage('user', text);
+    // Прокручиваем так, чтобы последнее сообщение встало вверху области видимости
+    userMsgWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const idToken = await currentUser.getIdToken();
     const timestamp = new Date().toISOString();
@@ -435,6 +462,8 @@ async function sendMessage() {
     await loadChatList();
 }
 
+let thinkingTimerInterval = null;
+
 function showTypingIndicator() {
     const container = document.getElementById('chatMessages');
     const wrap = document.createElement('div');
@@ -443,14 +472,24 @@ function showTypingIndicator() {
 
     const bubble = document.createElement('div');
     bubble.classList.add('message-bubble', 'typing-bubble');
-    bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    bubble.innerHTML = '<span class="thinking-text" id="thinkingSeconds">thinking 0s</span><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
 
     wrap.appendChild(bubble);
     container.appendChild(wrap);
-    container.scrollTop = container.scrollHeight;
+
+    let seconds = 0;
+    const counterEl = bubble.querySelector('#thinkingSeconds');
+    thinkingTimerInterval = setInterval(() => {
+        seconds++;
+        if (counterEl) counterEl.textContent = `thinking ${seconds}s`;
+    }, 1000);
 }
 
 function removeTypingIndicator() {
+    if (thinkingTimerInterval) {
+        clearInterval(thinkingTimerInterval);
+        thinkingTimerInterval = null;
+    }
     const el = document.getElementById('typingIndicator');
     if (el) el.remove();
 }
